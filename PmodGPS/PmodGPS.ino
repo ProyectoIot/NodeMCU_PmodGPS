@@ -4,9 +4,9 @@
 //librerias wifi
 
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
+//#include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
+//#include <ESP8266mDNS.h>
  
 /*
    This sample sketch demonstrates the normal use of a TinyGPS++ (TinyGPSPlus) object.
@@ -36,20 +36,26 @@ IPAddress subnet(255,255,255,0);
 const char *ssid = "TP-LINK_F90A14"; // Put your SSID here
 const char *password = "11135999"; // Put your PASSWORD here
 
+ float latitud;
+ float longitud;
+ float velocidad;
+
+ String datos="";
+  
   ESP8266WebServer server(80);
 
-//void handleNotFound(){
-//  String message = "Server is running!\n\n";
-//  message += "URI: ";
-//  message += server.uri();
-//  message += "\nMethod: ";
-//  message += (server.method() == HTTP_GET)?"GET":"POST";
-//  message += "\nArguments: ";
-//  message += server.args();
-//  message += "\n";
-//  server.send(200, "text/plain", message);
-//  
-//  }
+void handleRoot() 
+{
+//   server.send(200, "text/plain", "Hola mundo!");
+//    server.send(200, "text/plain", "---->");
+    datos=String(latitud,6)+","+String(longitud,6)+","+String(velocidad,6);
+     server.send(200, "text/plain",datos );
+}
+
+void handleNotFound() 
+{
+   server.send(404, "text/plain", "Not found");
+}
 
 void setup()
 {
@@ -62,15 +68,7 @@ void setup()
   Serial.println(F("by Mikal Hart"));
   Serial.println();
 
-//  if (wifiType == 0){
-//    if(!strcmp(ssid,"TP-LINK_F90A14")){
-//       //Serial.println("Please set your SSID");
-//       while(1);
-//    }
-//    if(!strcmp(password,"11135999")){
-//       //Serial.println("Please set your PASSWORD");
-//       while(1);
-//    }
+
      WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     WiFi.config(staticIP, gateway, subnet);
@@ -82,11 +80,30 @@ void setup()
 //    Serial.println("");
     Serial.println(WiFi.localIP());
     delay(5000);
+    // Start the server
+  
+  // Ruteo para '/'
+   server.on("/", handleRoot);
+ 
+   // Ruteo para '/inline' usando función lambda
+   server.on("/inline", []() {
+      server.send(200, "text/plain", "Esto tambien funciona");
+   });
+ 
+   // Ruteo para URI desconocida
+   server.onNotFound(handleNotFound);
+ 
+   // Iniciar servidor
+   server.begin();
+   Serial.println("HTTP server started");
 //}
 }
 
 void loop()
 {
+  
+  server.handleClient();
+
   // This sketch displays information every time a new sentence is correctly encoded.
   while (ss.available() > 0){
   //Serial.println(ss.read());
@@ -108,9 +125,11 @@ void displayInfo()
   Serial.print(F("Location: ")); 
   if (gps.location.isValid() ) // && gps.location.isUpdated()
   {   // datos del gps
-    Serial.print(gps.location.lat(), 6);
+    latitud=gps.location.lat();
+    Serial.print(latitud, 6);
     Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
+    longitud=gps.location.lng();
+    Serial.print(longitud, 6);
   }
   else
   {
@@ -120,7 +139,8 @@ void displayInfo()
    Serial.print(F("  Velocidad: ")); 
   if (gps.speed.isValid())
   {   // datos de velocidad
-    Serial.print(gps.speed.kmph(), 6);
+    velocidad=gps.speed.kmph();
+    Serial.print(velocidad, 6);
   }
   else
   {
